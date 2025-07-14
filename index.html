@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales & Inventory Manager</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 1rem;
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .btn-primary {
+            @apply bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out;
+        }
+        .btn-secondary {
+            @apply bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-400 transition duration-300 ease-in-out;
+        }
+        .btn-danger {
+            @apply bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out;
+        }
+        .input-field {
+            @apply w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .tab-button {
+            @apply flex-1 py-3 text-center font-medium text-gray-700 border-b-2 border-transparent hover:border-blue-500 transition duration-300 ease-in-out;
+        }
+        .tab-button.active {
+            @apply border-blue-600 text-blue-600;
+        }
+        .section-content {
+            display: none;
+        }
+        .section-content.active {
+            display: block;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .notification.show {
+            display: block;
+            opacity: 1;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            display: none;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <div class="container flex-grow">
+        <h1 class="text-3xl font-bold text-center my-6 text-gray-800">Sales & Inventory Manager</h1>
+
+        <!-- Navigation Tabs -->
+        <div class="flex bg-white rounded-xl shadow-md mb-4 overflow-hidden">
+            <button class="tab-button active" data-tab="inventory">Inventory</button>
+            <button class="tab-button" data-tab="sales">Sales</button>
+            <button class="tab-button" data-tab="purchases">Purchases</button>
+            <button class="tab-button" data-tab="debtors">Debtors</button>
+            <button class="tab-button" data-tab="settings">Settings</button>
+        </div>
+
+        <!-- Notification Message Box -->
+        <div id="notification" class="notification"></div>
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Inventory Section -->
+        <section id="inventory" class="section-content active">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Inventory Management</h2>
+                <div class="flex space-x-2 mb-4">
+                    <button id="add-product-btn" class="btn-primary flex-1">Add Product</button>
+                    <button id="update-price-btn" class="btn-secondary flex-1">Update Prices</button>
+                </div>
+
+                <h3 class="text-lg font-medium mb-2 text-gray-600">Stock Position Summary</h3>
+                <div class="mb-4">
+                    <input type="text" id="inventory-search" placeholder="Search by Product Name, Barcode, Supplier..." class="input-field mb-2">
+                    <input type="date" id="inventory-expiry-filter" class="input-field mb-2">
+                    <select id="inventory-supplier-filter" class="input-field mb-2">
+                        <option value="">All Suppliers</option>
+                    </select>
+                    <button id="apply-inventory-filters" class="btn-secondary w-full">Apply Filters</button>
+                </div>
+                <div id="inventory-summary" class="overflow-x-auto">
+                    <!-- Inventory list will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Sales Section -->
+        <section id="sales" class="section-content">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Sales Tracking</h2>
+                <div class="flex space-x-2 mb-4">
+                    <button id="record-sale-btn" class="btn-primary flex-1">Record Sale</button>
+                    <button id="reverse-sale-btn" class="btn-danger flex-1">Reverse Sale</button>
+                </div>
+
+                <h3 class="text-lg font-medium mb-2 text-gray-600">Sales Position Summary</h3>
+                <div class="mb-4">
+                    <input type="date" id="sales-start-date" class="input-field mb-2">
+                    <input type="date" id="sales-end-date" class="input-field mb-2">
+                    <select id="sales-payment-method-filter" class="input-field mb-2">
+                        <option value="">All Payment Methods</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Credit">Credit</option>
+                    </select>
+                    <button id="apply-sales-filters" class="btn-secondary w-full">Apply Filters</button>
+                </div>
+                <div id="sales-summary" class="overflow-x-auto">
+                    <!-- Sales list will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Purchases Section -->
+        <section id="purchases" class="section-content">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Purchase Management</h2>
+                <button id="record-purchase-btn" class="btn-primary w-full mb-4">Record Purchase</button>
+
+                <h3 class="text-lg font-medium mb-2 text-gray-600">Purchase History</h3>
+                <div id="purchases-summary" class="overflow-x-auto">
+                    <!-- Purchases list will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Debtors Section -->
+        <section id="debtors" class="section-content">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Debtors Management</h2>
+                <div id="debtors-summary" class="overflow-x-auto">
+                    <!-- Debtors list will be rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings" class="section-content">
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">App Settings & Sync</h2>
+                <div class="mb-4">
+                    <label for="expiry-notification-period" class="block text-sm font-medium text-gray-700 mb-1">Notify for expiry within (days):</label>
+                    <input type="number" id="expiry-notification-period" class="input-field" value="30">
+                </div>
+                <button id="manual-sync-btn" class="btn-primary w-full mb-2">Manual Sync Data</button>
+                <p class="text-sm text-gray-600 mt-2">Last Sync: <span id="last-sync-time">Never</span></p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Add Product Modal -->
+    <div id="add-product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Add New Product</h2>
+            <form id="add-product-form">
+                <div class="mb-3">
+                    <label for="add-product-barcode" class="block text-sm font-medium text-gray-700">Barcode</label>
+                    <input type="text" id="add-product-barcode" class="input-field mt-1" required>
+                    <button type="button" id="scan-add-product-barcode" class="btn-secondary mt-2 w-full">Scan Barcode</button>
+                    <video id="add-product-scanner-video" style="width: 100%; display: none;"></video>
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                    <input type="text" id="add-product-name" class="input-field mt-1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-retail-price" class="block text-sm font-medium text-gray-700">Retail Price</label>
+                    <input type="number" id="add-product-retail-price" class="input-field mt-1" step="0.01" required>
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-wholesale-price" class="block text-sm font-medium text-gray-700">Wholesale Price</label>
+                    <input type="number" id="add-product-wholesale-price" class="input-field mt-1" step="0.01" required>
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-wholesale-qty" class="block text-sm font-medium text-gray-700">Wholesale Quantity</label>
+                    <input type="number" id="add-product-wholesale-qty" class="input-field mt-1" value="1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-stock" class="block text-sm font-medium text-gray-700">Initial Stock</label>
+                    <input type="number" id="add-product-stock" class="input-field mt-1" value="0" required>
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-manufacture-date" class="block text-sm font-medium text-gray-700">Manufacture Date</label>
+                    <input type="date" id="add-product-manufacture-date" class="input-field mt-1">
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-expiry-date" class="block text-sm font-medium text-gray-700">Expiry Date</label>
+                    <input type="date" id="add-product-expiry-date" class="input-field mt-1">
+                </div>
+                <div class="mb-3">
+                    <label for="add-product-supplier" class="block text-sm font-medium text-gray-700">Supplier</label>
+                    <input type="text" id="add-product-supplier" class="input-field mt-1">
+                </div>
+                <button type="submit" class="btn-primary w-full">Add Product</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Record Sale Modal -->
+    <div id="record-sale-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Record New Sale</h2>
+            <form id="record-sale-form">
+                <div class="mb-3">
+                    <label for="sale-product-barcode" class="block text-sm font-medium text-gray-700">Product Barcode</label>
+                    <input type="text" id="sale-product-barcode" class="input-field mt-1" required>
+                    <button type="button" id="scan-sale-product-barcode" class="btn-secondary mt-2 w-full">Scan Barcode</button>
+                    <video id="sale-scanner-video" style="width: 100%; display: none;"></video>
+                </div>
+                <div class="mb-3">
+                    <label for="sale-product-name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                    <input type="text" id="sale-product-name" class="input-field mt-1" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="sale-type" class="block text-sm font-medium text-gray-700">Sale Type</label>
+                    <select id="sale-type" class="input-field mt-1" required>
+                        <option value="Retail">Retail</option>
+                        <option value="Wholesale">Wholesale</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="sale-quantity" class="block text-sm font-medium text-gray-700">Quantity Sold</label>
+                    <input type="number" id="sale-quantity" class="input-field mt-1" value="1" min="1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="sale-price-per-unit" class="block text-sm font-medium text-gray-700">Price Per Unit</label>
+                    <input type="number" id="sale-price-per-unit" class="input-field mt-1" step="0.01" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="sale-discount" class="block text-sm font-medium text-gray-700">Discount (%)</label>
+                    <input type="number" id="sale-discount" class="input-field mt-1" value="0" min="0" max="100">
+                </div>
+                <div class="mb-3">
+                    <label for="sale-total-amount" class="block text-sm font-medium text-gray-700">Total Amount</label>
+                    <input type="number" id="sale-total-amount" class="input-field mt-1" step="0.01" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="sale-payment-method" class="block text-sm font-medium text-gray-700">Payment Method</label>
+                    <select id="sale-payment-method" class="input-field mt-1" required>
+                        <option value="Cash">Cash</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Credit">Credit</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="debtor-name-group" style="display: none;">
+                    <label for="sale-debtor-name" class="block text-sm font-medium text-gray-700">Debtor Name</label>
+                    <input type="text" id="sale-debtor-name" class="input-field mt-1">
+                </div>
+                <button type="submit" class="btn-primary w-full">Record Sale</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Record Purchase Modal -->
+    <div id="record-purchase-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Record New Purchase</h2>
+            <form id="record-purchase-form">
+                <div class="mb-3">
+                    <label for="purchase-product-barcode" class="block text-sm font-medium text-gray-700">Product Barcode</label>
+                    <input type="text" id="purchase-product-barcode" class="input-field mt-1" required>
+                    <button type="button" id="scan-purchase-product-barcode" class="btn-secondary mt-2 w-full">Scan Barcode</button>
+                    <video id="purchase-scanner-video" style="width: 100%; display: none;"></video>
+                </div>
+                <div class="mb-3">
+                    <label for="purchase-product-name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                    <input type="text" id="purchase-product-name" class="input-field mt-1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="purchase-quantity" class="block text-sm font-medium text-gray-700">Quantity Purchased</label>
+                    <input type="number" id="purchase-quantity" class="input-field mt-1" min="1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="purchase-cost-per-unit" class="block text-sm font-medium text-gray-700">Cost Per Unit</label>
+                    <input type="number" id="purchase-cost-per-unit" class="input-field mt-1" step="0.01" required>
+                </div>
+                <div class="mb-3">
+                    <label for="purchase-total-cost" class="block text-sm font-medium text-gray-700">Total Cost</label>
+                    <input type="number" id="purchase-total-cost" class="input-field mt-1" step="0.01" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="purchase-supplier" class="block text-sm font-medium text-gray-700">Supplier</label>
+                    <input type="text" id="purchase-supplier" class="input-field mt-1">
+                </div>
+                <div class="mb-3">
+                    <label for="purchase-manufacture-date" class="block text-sm font-medium text-gray-700">Manufacture Date</label>
+                    <input type="date" id="purchase-manufacture-date" class="input-field mt-1">
+                </div>
+                <div class="mb-3">
+                    <label for="purchase-expiry-date" class="block text-sm font-medium text-gray-700">Expiry Date</label>
+                    <input type="date" id="purchase-expiry-date" class="input-field mt-1">
+                </div>
+                <button type="submit" class="btn-primary w-full">Record Purchase</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Update Price Modal -->
+    <div id="update-price-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Update Product Prices</h2>
+            <form id="update-price-form">
+                <div class="mb-3">
+                    <label for="update-price-barcode" class="block text-sm font-medium text-gray-700">Product Barcode</label>
+                    <input type="text" id="update-price-barcode" class="input-field mt-1" required>
+                    <button type="button" id="scan-update-price-barcode" class="btn-secondary mt-2 w-full">Scan Barcode</button>
+                    <video id="update-price-scanner-video" style="width: 100%; display: none;"></video>
+                </div>
+                <div class="mb-3">
+                    <label for="update-price-product-name" class="block text-sm font-medium text-gray-700">Product Name</label>
+                    <input type="text" id="update-price-product-name" class="input-field mt-1" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="update-price-retail-price" class="block text-sm font-medium text-gray-700">New Retail Price</label>
+                    <input type="number" id="update-price-retail-price" class="input-field mt-1" step="0.01" required>
+                </div>
+                <div class="mb-3">
+                    <label for="update-price-wholesale-price" class="block text-sm font-medium text-gray-700">New Wholesale Price</label>
+                    <input type="number" id="update-price-wholesale-price" class="input-field mt-1" step="0.01" required>
+                </div>
+                <button type="submit" class="btn-primary w-full">Update Prices</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reverse Sale Modal -->
+    <div id="reverse-sale-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Reverse Sale Transaction</h2>
+            <form id="reverse-sale-form">
+                <div class="mb-3">
+                    <label for="reverse-sale-id" class="block text-sm font-medium text-gray-700">Transaction ID</label>
+                    <input type="text" id="reverse-sale-id" class="input-field mt-1" required>
+                </div>
+                <button type="submit" class="btn-danger w-full">Reverse Sale</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Debtor Payment Modal -->
+    <div id="debtor-payment-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Record Debtor Payment</h2>
+            <form id="debtor-payment-form">
+                <input type="hidden" id="debtor-payment-debtor-id">
+                <div class="mb-3">
+                    <label for="debtor-payment-debtor-name" class="block text-sm font-medium text-gray-700">Debtor Name</label>
+                    <input type="text" id="debtor-payment-debtor-name" class="input-field mt-1" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="debtor-payment-outstanding" class="block text-sm font-medium text-gray-700">Outstanding Debt</label>
+                    <input type="number" id="debtor-payment-outstanding" class="input-field mt-1" step="0.01" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="debtor-payment-amount" class="block text-sm font-medium text-gray-700">Amount Paid</label>
+                    <input type="number" id="debtor-payment-amount" class="input-field mt-1" step="0.01" min="0" required>
+                </div>
+                <button type="submit" class="btn-primary w-full">Record Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Instascan Library for Barcode Scanning -->
+    <script src="https://raw.githack.com/schmich/instascan-builds/master/instascan.min.js"></script>
+
+    <script>
+        // --- Configuration ---
+        // IMPORTANT: Replace this with the Web App URL you got from deploying Google Apps Script.
+        // Example: 'https://script.google.com/macros/s/AKfycbz_YOUR_DEPLOYMENT_ID_HERE/exec';
+        const GOOGLE_APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzDCd4kshdWw_DohuWkvCQonXci34EH9p8StaZINFEjO8pMkLRSQTfu1Ibefgyq8MkGCg/exec';
+
+        // --- Global Data Stores (for offline capability) ---
+        let inventoryData = [];
+        let salesData = [];
+        let purchasesData = [];
+        let debtorsData = [];
+
+        // --- DOM Elements ---
+        const tabs = document.querySelectorAll('.tab-button');
+        const sections = document.querySelectorAll('.section-content');
+        const notification = document.getElementById('notification');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Modals
+        const addProductModal = document.getElementById('add-product-modal');
+        const recordSaleModal = document.getElementById('record-sale-modal');
+        const recordPurchaseModal = document.getElementById('record-purchase-modal');
+        const updatePriceModal = document.getElementById('update-price-modal');
+        const reverseSaleModal = document.getElementById('reverse-sale-modal');
+        const debtorPaymentModal = document.getElementById('debtor-payment-modal');
+
+        // Buttons to open modals
+        document.getElementById('add-product-btn').addEventListener('click', () => openModal(addProductModal));
+        document.getElementById('record-sale-btn').addEventListener('click', () => openModal(recordSaleModal));
+        document.getElementById('record-purchase-btn').addEventListener('click', () => openModal(recordPurchaseModal));
+        document.getElementById('update-price-btn').addEventListener('click', () => openModal(updatePriceModal));
+        document.getElementById('reverse-sale-btn').addEventListener('click', () => openModal(reverseSaleModal));
+
+        // Forms
+        const addProductForm = document.getElementById('add-product-form');
+        const recordSaleForm = document.getElementById('record-sale-form');
+        const recordPurchaseForm = document.getElementById('record-purchase-form');
+        const updatePriceForm = document.getElementById('update-price-form');
+        const reverseSaleForm = document.getElementById('reverse-sale-form');
+        const debtorPaymentForm = document.getElementById('debtor-payment-form');
+
+        // Barcode Scanner elements
+        const addProductScannerVideo = document.getElementById('add-product-scanner-video');
+        const saleScannerVideo = document.getElementById('sale-scanner-video');
+        const purchaseScannerVideo = document.getElementById('purchase-scanner-video');
+        const updatePriceScannerVideo = document.getElementById('update-price-scanner-video');
+
+        let currentScanner = null; // To manage active scanner instance
+
+        // --- Utility Functions ---
+
+        /**
+         * Displays a temporary notification message.
+         * @param {string} message The message to display.
+         * @param {string} type 'success' or 'error'.
+         */
+        function showNotification(message, type = 'info') {
+            notification.textContent = message;
+            notification.className = 'notification show';
+            if (type === 'success') {
+                notification.style.backgroundColor = '#4CAF50';
+            } else if (type === 'error') {
+                notification.style.backgroundColor = '#f44336';
+            } else {
+                notification.style.backgroundColor = '#333';
+            }
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        /** Shows the loading overlay. */
+        function showLoading() {
+            loadingOverlay.style.display = 'flex';
+        }
+
+        /** Hides the loading overlay. */
+        function hideLoading() {
+            loadingOverlay.style.display = 'none';
+        }
+
+        /**
+         * Opens a modal dialog.
+         * @param {HTMLElement} modal The modal element to open.
+         */
+        function openModal(modal) {
+            modal.style.display = 'flex';
+            // Stop any active scanner when opening a new modal
+            if (currentScanner) {
+                currentScanner.stop();
+                document.querySelectorAll('video').forEach(video => video.style.display = 'none');
+            }
+        }
+
+        /**
+         * Closes a modal dialog.
+         * @param {HTMLElement} modal The modal element to close.
+         */
+        function closeModal(modal) {
+            modal.style.display = 'none';
+            // Stop scanner if it was active in this modal
+            if (currentScanner) {
+                currentScanner.stop();
+                document.querySelectorAll('video').forEach(video => video.style.display = 'none');
+                currentScanner = null;
+            }
+            // Reset form if it exists
+            const form = modal.querySelector('form');
+            if (form) form.reset();
+            // Clear any product info fields that might be pre-filled
+            const productNameField = modal.querySelector('[id$="-product-name"]');
+            if (productNameField) productNameField.value = '';
+            const pricePerUnitField = modal.querySelector('[id$="-price-per-unit"]');
+            if (pricePerUnitField) pricePerUnitField.value = '';
+            const totalAmountField = modal.querySelector('[id$="-total-amount"]');
+            if (totalAmountField) totalAmountField.value = '';
+            const totalCostField = modal.querySelector('[id$="-total-cost"]');
+            if (totalCostField) totalCostField.value = '';
+            const debtorNameGroup = document.getElementById('debtor-name-group');
+            if (debtorNameGroup) debtorNameGroup.style.display = 'none';
+        }
+
+        // Close modals when clicking outside or on the close button
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    closeModal(modal);
+                }
+            });
+            modal.querySelector('.close-button').addEventListener('click', () => closeModal(modal));
+        });
+
+        // --- Data Persistence (localStorage) ---
+
+        /** Saves all current data to localStorage. */
+        function saveDataToLocal() {
+            localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+            localStorage.setItem('salesData', JSON.stringify(salesData));
+            localStorage.setItem('purchasesData', JSON.stringify(purchasesData));
+            localStorage.setItem('debtorsData', JSON.stringify(debtorsData));
+            localStorage.setItem('lastSyncTime', new Date().toLocaleString());
+            document.getElementById('last-sync-time').textContent = new Date().toLocaleString();
+        }
+
+        /** Loads data from localStorage. */
+        function loadDataFromLocal() {
+            const storedInventory = localStorage.getItem('inventoryData');
+            const storedSales = localStorage.getItem('salesData');
+            const storedPurchases = localStorage.getItem('purchasesData');
+            const storedDebtors = localStorage.getItem('debtorsData');
+            const lastSync = localStorage.getItem('lastSyncTime');
+
+            if (storedInventory) inventoryData = JSON.parse(storedInventory);
+            if (storedSales) salesData = JSON.parse(storedSales);
+            if (storedPurchases) purchasesData = JSON.parse(storedPurchases);
+            if (storedDebtors) debtorsData = JSON.parse(storedDebtors);
+            if (lastSync) document.getElementById('last-sync-time').textContent = lastSync;
+
+            renderAllSummaries(); // Render initial data
+            updateSupplierFilter(); // Populate supplier filter
+        }
+
+        // --- Google Apps Script API Calls ---
+
+        /**
+         * Makes a request to the Google Apps Script backend.
+         * @param {string} action The action to perform (e.g., 'getInventory', 'addProduct').
+         * @param {Object} data The data payload for POST requests.
+         * @param {string} method 'GET' or 'POST'.
+         * @returns {Promise<Object>} The response data.
+         */
+        async function callGAS(action, data = {}, method = 'GET') {
+            showLoading();
+            let url = GOOGLE_APPS_SCRIPT_WEB_APP_URL;
+
+            // --- DEBUGGING: Log the URL being used ---
+            console.log('Attempting to call GAS URL:', url);
+            if (url === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE' || !url.startsWith('https://script.google.com/macros/s/')) {
+                hideLoading();
+                throw new Error('Google Apps Script Web App URL is not set or is invalid. Please replace "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE" in the JavaScript code with your actual deployed Apps Script URL.');
+            }
+            // --- END DEBUGGING ---
+
+            let options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            if (method === 'GET') {
+                url += `?action=${action}`;
+            } else if (method === 'POST') {
+                options.body = JSON.stringify({ action, ...data });
+            }
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const result = await response.json();
+                if (result.status === 'error') {
+                    throw new Error(result.message);
+                }
+                return result.data;
+            } catch (error) {
+                console.error('API call failed:', error);
+                showNotification(`Error: ${error.message}`, 'error');
+                throw error; // Re-throw to be caught by calling function
+            } finally {
+                hideLoading();
+            }
+        }
+
+        /**
+         * Fetches all data from the backend and updates local stores.
+         */
+        async function fetchAllData() {
+            try {
+                inventoryData = await callGAS('getInventory');
+                salesData = await callGAS('getSales');
+                purchasesData = await callGAS('getPurchases');
+                debtorsData = await callGAS('getDebtors');
+                saveDataToLocal(); // Save fetched data to local storage
+                renderAllSummaries();
+                updateSupplierFilter();
+                showNotification('Data synced successfully!');
+            } catch (error) {
+                showNotification('Failed to sync data from server. Using offline data. Please check your Google Apps Script URL in the code.', 'error');
+                // If fetching fails, rely on localStorage data
+            }
+        }
+
+        // --- Barcode Scanning Logic ---
+        /**
+         * Initializes and starts the barcode scanner.
+         * @param {HTMLVideoElement} videoElement The video element to display the camera feed.
+         * @param {HTMLInputElement} inputField The input field to populate with the scanned barcode.
+         * @param {Function} onScanSuccess Callback function after a successful scan.
+         */
+        function startScanner(videoElement, inputField, onScanSuccess = () => {}) {
+            if (currentScanner) {
+                currentScanner.stop();
+                document.querySelectorAll('video').forEach(video => video.style.display = 'none');
+            }
+
+            videoElement.style.display = 'block';
+            currentScanner = new Instascan.Scanner({ video: videoElement, mirror: false }); // mirror: false for back camera
+
+            currentScanner.addListener('scan', function (content) {
+                inputField.value = content;
+                onScanSuccess(content);
+                currentScanner.stop();
+                videoElement.style.display = 'none';
+                showNotification('Barcode scanned: ' + content, 'success');
+            });
+
+            Instascan.Camera.getCameras().then(function (cameras) {
+                if (cameras.length > 0) {
+                    // Try to use the back camera if available, otherwise use the first one
+                    const backCamera = cameras.find(camera => camera.name.toLowerCase().includes('back')) || cameras[0];
+                    currentScanner.start(backCamera);
+                } else {
+                    showNotification('No cameras found.', 'error');
+                    videoElement.style.display = 'none';
+                }
+            }).catch(function (e) {
+                console.error(e);
+                showNotification('Error accessing camera: ' + e.message, 'error');
+                videoElement.style.display = 'none';
+            });
+        }
+
+        // Event listeners for barcode scan buttons
+        document.getElementById('scan-add-product-barcode').addEventListener('click', () => {
+            startScanner(addProductScannerVideo, document.getElementById('add-product-barcode'));
+        });
+        document.getElementById('scan-sale-product-barcode').addEventListener('click', () => {
+            startScanner(saleScannerVideo, document.getElementById('sale-product-barcode'), (barcode) => {
+                populateSaleProductInfo(barcode);
+            });
+        });
+        document.getElementById('scan-purchase-product-barcode').addEventListener('click', () => {
+            startScanner(purchaseScannerVideo, document.getElementById('purchase-product-barcode'), (barcode) => {
+                populatePurchaseProductInfo(barcode);
+            });
+        });
+        document.getElementById('scan-update-price-barcode').addEventListener('click', () => {
+            startScanner(updatePriceScannerVideo, document.getElementById('update-price-barcode'), (barcode) => {
+                populateUpdatePriceProductInfo(barcode);
+            });
+        });
+
+        // --- Form Submission Handlers ---
+
+        addProductForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const product = {
+                barcode: document.getElementById('add-product-barcode').value,
+                productName: document.getElementById('add-product-name').value,
+                retailPrice: document.getElementById('add-product-retail-price').value,
+                wholesalePrice: document.getElementById('add-product-wholesale-price').value,
+                wholesaleQty: document.getElementById('add-product-wholesale-qty').value,
+                currentStock: document.getElementById('add-product-stock').value,
+                manufactureDate: document.getElementById('add-product-manufacture-date').value,
+                expiryDate: document.getElementById('add-product-expiry-date').value,
+                supplier: document.getElementById('add-product-supplier').value,
+            };
+
+            try {
+                const newProduct = await callGAS('addProduct', { product }, 'POST');
+                inventoryData.push(newProduct); // Add to local data
+                saveDataToLocal();
+                closeModal(addProductModal);
+                renderInventorySummary();
+                updateSupplierFilter();
+                showNotification('Product added successfully!', 'success');
+            } catch (error) {
+                // Error handled by callGAS
+            }
+        });
+
+        recordSaleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const barcode = document.getElementById('sale-product-barcode').value;
+            const product = inventoryData.find(p => p['Barcode'] === barcode);
+
+            if (!product) {
+                showNotification('Product not found. Please add it to inventory first.', 'error');
+                return;
+            }
+
+            const sale = {
+                productId: product['Product ID'],
+                barcode: barcode,
+                productName: product['Product Name'],
+                quantitySold: document.getElementById('sale-quantity').value,
+                saleType: document.getElementById('sale-type').value,
+                pricePerUnit: document.getElementById('sale-price-per-unit').value,
+                totalAmount: document.getElementById('sale-total-amount').value,
+                discount: document.getElementById('sale-discount').value,
+                paymentMethod: document.getElementById('sale-payment-method').value,
+                debtorName: document.getElementById('sale-debtor-name').value,
+            };
+
+            try {
+                const recordedSale = await callGAS('recordSale', { sale }, 'POST');
+                // Update local data based on the server's response
+                // For simplicity, re-fetch all data after a complex operation like sale
+                await fetchAllData();
+                closeModal(recordSaleModal);
+                showNotification('Sale recorded successfully!', 'success');
+            } catch (error) {
+                // Error handled by callGAS
+            }
+        });
+
+        recordPurchaseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const barcode = document.getElementById('purchase-product-barcode').value;
+            const existingProduct = inventoryData.find(p => p['Barcode'] === barcode);
+
+            const purchase = {
+                barcode: barcode,
+                productName: document.getElementById('purchase-product-name').value,
+                quantityPurchased: document.getElementById('purchase-quantity').value,
+                costPerUnit: document.getElementById('purchase-cost-per-unit').value,
+                totalCost: document.getElementById('purchase-total-cost').value,
+                supplier: document.getElementById('purchase-supplier').value,
+                manufactureDate: document.getElementById('purchase-manufacture-date').value,
+                expiryDate: document.getElementById('purchase-expiry-date').value,
+            };
+
+            // If product exists, ensure its ID is passed for update
+            if (existingProduct) {
+                purchase.productId = existingProduct['Product ID'];
+            }
+
+            try {
+                const recordedPurchase = await callGAS('recordPurchase', { purchase }, 'POST');
+                // Re-fetch all data to ensure inventory and purchases are updated
+                await fetchAllData();
+                closeModal(recordPurchaseModal);
+                showNotification('Purchase recorded successfully!', 'success');
+            }
+            catch (error) {
+                // Error handled by callGAS
+            }
+        });
+
+        updatePriceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const barcode = document.getElementById('update-price-barcode').value;
+            const product = inventoryData.find(p => p['Barcode'] === barcode);
+
+            if (!product) {
+                showNotification('Product not found. Please scan or enter a valid barcode.', 'error');
+                return;
+            }
+
+            const productId = product['Product ID'];
+            const retailPrice = document.getElementById('update-price-retail-price').value;
+            const wholesalePrice = document.getElementById('update-price-wholesale-price').value;
+
+            try {
+                await callGAS('updateProductPrice', { productId, retailPrice, wholesalePrice }, 'POST');
+                // Re-fetch all data to ensure inventory is updated
+                await fetchAllData();
+                closeModal(updatePriceModal);
+                showNotification('Product prices updated successfully!', 'success');
+            } catch (error) {
+                // Error handled by callGAS
+            }
+        });
+
+        reverseSaleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const transactionId = document.getElementById('reverse-sale-id').value;
+
+            try {
+                await callGAS('reverseSale', { transactionId }, 'POST');
+                // Re-fetch all data to ensure sales, inventory, and debtors are updated
+                await fetchAllData();
+                closeModal(reverseSaleModal);
+                showNotification('Sale reversed successfully!', 'success');
+            } catch (error) {
+                // Error handled by callGAS
+            }
+        });
+
+        debtorPaymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const debtorId = document.getElementById('debtor-payment-debtor-id').value;
+            const amountPaid = document.getElementById('debtor-payment-amount').value;
+
+            try {
+                await callGAS('updateDebtorPayment', { debtorId, amountPaid }, 'POST');
+                // Re-fetch all data to ensure debtors are updated
+                await fetchAllData();
+                closeModal(debtorPaymentModal);
+                showNotification('Debtor payment recorded successfully!', 'success');
+            } catch (error) {
+                // Error handled by callGAS
+            }
+        });
+
+
+        // --- Dynamic Form Logic ---
+
+        // Sale Form: Populate Product Info based on Barcode
+        document.getElementById('sale-product-barcode').addEventListener('input', (e) => populateSaleProductInfo(e.target.value));
+        document.getElementById('sale-type').addEventListener('change', calculateSaleTotal);
+        document.getElementById('sale-quantity').addEventListener('input', calculateSaleTotal);
+        document.getElementById('sale-discount').addEventListener('input', calculateSaleTotal);
+        document.getElementById('sale-payment-method').addEventListener('change', (e) => {
+            const debtorNameGroup = document.getElementById('debtor-name-group');
+            if (e.target.value === 'Credit') {
+                debtorNameGroup.style.display = 'block';
+                document.getElementById('sale-debtor-name').setAttribute('required', 'true');
+            } else {
+                debtorNameGroup.style.display = 'none';
+                document.getElementById('sale-debtor-name').removeAttribute('required');
+                document.getElementById('sale-debtor-name').value = ''; // Clear debtor name
+            }
+        });
+
+        function populateSaleProductInfo(barcode) {
+            const product = inventoryData.find(p => p['Barcode'] === barcode);
+            const productNameField = document.getElementById('sale-product-name');
+            const pricePerUnitField = document.getElementById('sale-price-per-unit');
+            const saleTypeSelect = document.getElementById('sale-type');
+
+            if (product) {
+                productNameField.value = product['Product Name'];
+                // Set default price based on retail/wholesale selection
+                if (saleTypeSelect.value === 'Retail') {
+                    pricePerUnitField.value = product['Retail Price'];
+                } else {
+                    pricePerUnitField.value = product['Wholesale Price'];
+                }
+                calculateSaleTotal();
+            } else {
+                productNameField.value = 'Product Not Found';
+                pricePerUnitField.value = '';
+                document.getElementById('sale-total-amount').value = '';
+            }
+        }
+
+        function calculateSaleTotal() {
+            const barcode = document.getElementById('sale-product-barcode').value;
+            const product = inventoryData.find(p => p['Barcode'] === barcode);
+            if (!product) return;
+
+            const saleType = document.getElementById('sale-type').value;
+            const quantity = parseInt(document.getElementById('sale-quantity').value);
+            const discount = parseFloat(document.getElementById('sale-discount').value) || 0;
+
+            let pricePerUnit;
+            if (saleType === 'Retail') {
+                pricePerUnit = parseFloat(product['Retail Price']);
+            } else { // Wholesale
+                pricePerUnit = parseFloat(product['Wholesale Price']);
+                // Adjust quantity if it's wholesale and not a multiple of wholesale Qty
+                const wholesaleQty = parseInt(product['Wholesale Qty']);
+                if (wholesaleQty > 0 && quantity % wholesaleQty !== 0) {
+                    showNotification(`For wholesale, quantity should be a multiple of ${wholesaleQty}.`, 'info');
+                    // Optionally, you could auto-correct quantity here or prevent submission
+                }
+            }
+
+            document.getElementById('sale-price-per-unit').value = pricePerUnit.toFixed(2);
+
+            let total = pricePerUnit * quantity;
+            if (discount > 0) {
+                total = total * (1 - discount / 100);
+            }
+            document.getElementById('sale-total-amount').value = total.toFixed(2);
+        }
+
+        // Purchase Form: Calculate Total Cost
+        document.getElementById('purchase-quantity').addEventListener('input', calculatePurchaseTotal);
+        document.getElementById('purchase-cost-per-unit').addEventListener('input', calculatePurchaseTotal);
+        document.getElementById('purchase-product-barcode').addEventListener('input', (e) => populatePurchaseProductInfo(e.target.value));
+
+        function populatePurchaseProductInfo(barcode) {
+            const product = inventoryData.find(p => p['Barcode'] === barcode);
+            const productNameField = document.getElementById('purchase-product-name');
+            if (product) {
+                productNameField.value = product['Product Name'];
+            } else {
+                productNameField.value = 'New Product'; // Indicate it's a new product
+            }
+            calculatePurchaseTotal();
+        }
+
+        function calculatePurchaseTotal() {
+            const quantity = parseFloat(document.getElementById('purchase-quantity').value) || 0;
+            const costPerUnit = parseFloat(document.getElementById('purchase-cost-per-unit').value) || 0;
+            document.getElementById('purchase-total-cost').value = (quantity * costPerUnit).toFixed(2);
+        }
+
+        // Update Price Form: Populate Product Info based on Barcode
+        document.getElementById('update-price-barcode').addEventListener('input', (e) => populateUpdatePriceProductInfo(e.target.value));
+
+        function populateUpdatePriceProductInfo(barcode) {
+            const product = inventoryData.find(p => p['Barcode'] === barcode);
+            const productNameField = document.getElementById('update-price-product-name');
+            const retailPriceField = document.getElementById('update-price-retail-price');
+            const wholesalePriceField = document.getElementById('update-price-wholesale-price');
+
+            if (product) {
+                productNameField.value = product['Product Name'];
+                retailPriceField.value = product['Retail Price'];
+                wholesalePriceField.value = product['Wholesale Price'];
+            } else {
+                productNameField.value = 'Product Not Found';
+                retailPriceField.value = '';
+                wholesalePriceField.value = '';
+            }
+        }
+
+        // --- Rendering Functions (Summaries) ---
+
+        /** Renders all summary sections. */
+        function renderAllSummaries() {
+            renderInventorySummary();
+            renderSalesSummary();
+            renderPurchasesSummary();
+            renderDebtorsSummary();
+        }
+
+        /** Renders the Inventory Summary table. */
+        function renderInventorySummary() {
+            const container = document.getElementById('inventory-summary');
+            container.innerHTML = ''; // Clear previous content
+
+            const searchTerm = document.getElementById('inventory-search').value.toLowerCase();
+            const expiryFilterDate = document.getElementById('inventory-expiry-filter').value;
+            const supplierFilter = document.getElementById('inventory-supplier-filter').value;
+            const expiryNotificationPeriod = parseInt(document.getElementById('expiry-notification-period').value) || 30;
+
+            let filteredInventory = inventoryData.filter(product => {
+                const matchesSearch = !searchTerm ||
+                    product['Product Name'].toLowerCase().includes(searchTerm) ||
+                    product['Barcode'].toLowerCase().includes(searchTerm) ||
+                    (product['Supplier'] && product['Supplier'].toLowerCase().includes(searchTerm));
+
+                const matchesSupplier = !supplierFilter || product['Supplier'] === supplierFilter;
+
+                return matchesSearch && matchesSupplier;
+            });
+
+            // Sort by expiry date, closest first
+            filteredInventory.sort((a, b) => {
+                const dateA = a['Expiry Date'] ? new Date(a['Expiry Date']) : null;
+                const dateB = b['Expiry Date'] ? new Date(b['Expiry Date']) : null;
+
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                return dateA.getTime() - dateB.getTime();
+            });
+
+
+            const table = document.createElement('table');
+            table.className = 'min-w-full bg-white rounded-lg shadow-md overflow-hidden text-sm';
+            table.innerHTML = `
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-3 text-left">Product</th>
+                        <th class="py-2 px-3 text-left">Stock</th>
+                        <th class="py-2 px-3 text-left">Prices (R/W)</th>
+                        <th class="py-2 px-3 text-left">Expiry</th>
+                        <th class="py-2 px-3 text-left">Supplier</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-table-body"></tbody>
+            `;
+            container.appendChild(table);
+            const tbody = document.getElementById('inventory-table-body');
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+            filteredInventory.forEach(product => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+
+                let expiryStatusClass = '';
+                if (product['Expiry Date']) {
+                    const expiryDate = new Date(product['Expiry Date']);
+                    expiryDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
+                    const diffTime = expiryDate.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays <= 0) {
+                        expiryStatusClass = 'bg-red-200 text-red-800 font-semibold'; // Expired
+                        showNotification(`Product "${product['Product Name']}" has expired!`, 'error');
+                    } else if (diffDays <= expiryNotificationPeriod) {
+                        expiryStatusClass = 'bg-yellow-100 text-yellow-700'; // Expiring soon
+                        showNotification(`Product "${product['Product Name']}" expires in ${diffDays} days!`, 'info');
+                    }
+                }
+
+                if (expiryFilterDate) {
+                    const filterDate = new Date(expiryFilterDate);
+                    filterDate.setHours(0, 0, 0, 0);
+                    const productExpiryDate = product['Expiry Date'] ? new Date(product['Expiry Date']) : null;
+                    if (!productExpiryDate || productExpiryDate.getTime() > filterDate.getTime()) {
+                        return; // Skip if product expires after filter date
+                    }
+                }
+
+
+                row.innerHTML = `
+                    <td class="py-2 px-3">
+                        <div class="font-semibold">${product['Product Name']}</div>
+                        <div class="text-xs text-gray-500">${product['Barcode']}</div>
+                    </td>
+                    <td class="py-2 px-3">
+                        <div class="${product['Current Stock'] <= 5 ? 'text-red-600 font-bold' : ''}">${product['Current Stock']}</div>
+                    </td>
+                    <td class="py-2 px-3">
+                        <div>Retail: $${product['Retail Price'].toFixed(2)}</div>
+                        <div>Wholesale: $${product['Wholesale Price'].toFixed(2)} (${product['Wholesale Qty']} units)</div>
+                    </td>
+                    <td class="py-2 px-3 ${expiryStatusClass}">
+                        ${product['Expiry Date'] || 'N/A'}
+                    </td>
+                    <td class="py-2 px-3">${product['Supplier'] || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (filteredInventory.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">No products found matching criteria.</td></tr>';
+            }
+        }
+
+        /** Renders the Sales Summary table. */
+        function renderSalesSummary() {
+            const container = document.getElementById('sales-summary');
+            container.innerHTML = '';
+
+            const startDate = document.getElementById('sales-start-date').value;
+            const endDate = document.getElementById('sales-end-date').value;
+            const paymentMethodFilter = document.getElementById('sales-payment-method-filter').value;
+
+            let filteredSales = salesData.filter(sale => {
+                const saleDate = new Date(sale['Timestamp']);
+                const matchesDate = (!startDate || saleDate >= new Date(startDate)) &&
+                                    (!endDate || saleDate <= new Date(endDate + 'T23:59:59')); // End of day
+
+                const matchesPaymentMethod = !paymentMethodFilter || sale['Payment Method'] === paymentMethodFilter;
+
+                return matchesDate && matchesPaymentMethod;
+            });
+
+            // Sort by timestamp, newest first
+            filteredSales.sort((a, b) => new Date(b['Timestamp']).getTime() - new Date(a['Timestamp']).getTime());
+
+            const table = document.createElement('table');
+            table.className = 'min-w-full bg-white rounded-lg shadow-md overflow-hidden text-sm';
+            table.innerHTML = `
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-3 text-left">Date/Time</th>
+                        <th class="py-2 px-3 text-left">Product</th>
+                        <th class="py-2 px-3 text-left">Qty</th>
+                        <th class="py-2 px-3 text-left">Total</th>
+                        <th class="py-2 px-3 text-left">Payment</th>
+                        <th class="py-2 px-3 text-left">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="sales-table-body"></tbody>
+            `;
+            container.appendChild(table);
+            const tbody = document.getElementById('sales-table-body');
+
+            let cashTotal = 0;
+            let bankTransferTotal = 0;
+            let creditTotal = 0;
+
+            filteredSales.forEach(sale => {
+                const row = document.createElement('tr');
+                const statusClass = sale['Transaction Status'] === 'Reversed' ? 'bg-red-100 text-red-700 line-through' : '';
+                row.className = `border-b border-gray-200 hover:bg-gray-50 ${statusClass}`;
+
+                row.innerHTML = `
+                    <td class="py-2 px-3">${sale['Timestamp']}</td>
+                    <td class="py-2 px-3">
+                        <div class="font-semibold">${sale['Product Name']}</div>
+                        <div class="text-xs text-gray-500">${sale['Barcode']} (${sale['Sale Type']})</div>
+                    </td>
+                    <td class="py-2 px-3">${sale['Quantity Sold']}</td>
+                    <td class="py-2 px-3">$${sale['Total Amount'].toFixed(2)}</td>
+                    <td class="py-2 px-3">${sale['Payment Method']} ${sale['Debtor Name'] ? `(${sale['Debtor Name']})` : ''}</td>
+                    <td class="py-2 px-3">${sale['Transaction Status']}</td>
+                `;
+                tbody.appendChild(row);
+
+                if (sale['Transaction Status'] === 'Active') {
+                    if (sale['Payment Method'] === 'Cash') cashTotal += sale['Total Amount'];
+                    else if (sale['Payment Method'] === 'Bank Transfer') bankTransferTotal += sale['Total Amount'];
+                    else if (sale['Payment Method'] === 'Credit') creditTotal += sale['Total Amount'];
+                }
+            });
+
+            if (filteredSales.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">No sales found matching criteria.</td></tr>';
+            }
+
+            const totalsDiv = document.createElement('div');
+            totalsDiv.className = 'mt-4 p-4 bg-blue-50 rounded-lg text-sm font-semibold';
+            totalsDiv.innerHTML = `
+                <p>Cash Sales Total: $${cashTotal.toFixed(2)}</p>
+                <p>Bank Transfer Sales Total: $${bankTransferTotal.toFixed(2)}</p>
+                <p>Credit Sales Total: $${creditTotal.toFixed(2)}</p>
+                <p class="text-lg mt-2">Overall Sales Total: $${(cashTotal + bankTransferTotal + creditTotal).toFixed(2)}</p>
+            `;
+            container.appendChild(totalsDiv);
+        }
+
+        /** Renders the Purchases Summary table. */
+        function renderPurchasesSummary() {
+            const container = document.getElementById('purchases-summary');
+            container.innerHTML = '';
+
+            // Sort by timestamp, newest first
+            const sortedPurchases = [...purchasesData].sort((a, b) => new Date(b['Timestamp']).getTime() - new Date(a['Timestamp']).getTime());
+
+            const table = document.createElement('table');
+            table.className = 'min-w-full bg-white rounded-lg shadow-md overflow-hidden text-sm';
+            table.innerHTML = `
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-3 text-left">Date/Time</th>
+                        <th class="py-2 px-3 text-left">Product</th>
+                        <th class="py-2 px-3 text-left">Qty</th>
+                        <th class="py-2 px-3 text-left">Cost</th>
+                        <th class="py-2 px-3 text-left">Supplier</th>
+                        <th class="py-2 px-3 text-left">Expiry</th>
+                    </tr>
+                </thead>
+                <tbody id="purchases-table-body"></tbody>
+            `;
+            container.appendChild(table);
+            const tbody = document.getElementById('purchases-table-body');
+
+            sortedPurchases.forEach(purchase => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="py-2 px-3">${purchase['Timestamp']}</td>
+                    <td class="py-2 px-3">
+                        <div class="font-semibold">${purchase['Product Name']}</div>
+                        <div class="text-xs text-gray-500">${purchase['Barcode']}</div>
+                    </td>
+                    <td class="py-2 px-3">${purchase['Quantity Purchased']}</td>
+                    <td class="py-2 px-3">$${purchase['Total Cost'].toFixed(2)}</td>
+                    <td class="py-2 px-3">${purchase['Supplier'] || 'N/A'}</td>
+                    <td class="py-2 px-3">${purchase['Expiry Date'] || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (sortedPurchases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">No purchases recorded.</td></tr>';
+            }
+        }
+
+        /** Renders the Debtors Summary table. */
+        function renderDebtorsSummary() {
+            const container = document.getElementById('debtors-summary');
+            container.innerHTML = '';
+
+            // Sort by outstanding debt, highest first
+            const sortedDebtors = [...debtorsData].sort((a, b) => b['Outstanding Debt'] - a['Outstanding Debt']);
+
+            const table = document.createElement('table');
+            table.className = 'min-w-full bg-white rounded-lg shadow-md overflow-hidden text-sm';
+            table.innerHTML = `
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-3 text-left">Debtor Name</th>
+                        <th class="py-2 px-3 text-left">Original Debt</th>
+                        <th class="py-2 px-3 text-left">Amount Paid</th>
+                        <th class="py-2 px-3 text-left">Outstanding</th>
+                        <th class="py-2 px-3 text-left">Status</th>
+                        <th class="py-2 px-3 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="debtors-table-body"></tbody>
+            `;
+            container.appendChild(table);
+            const tbody = document.getElementById('debtors-table-body');
+
+            sortedDebtors.forEach(debtor => {
+                const row = document.createElement('tr');
+                const statusClass = debtor['Status'] === 'Paid' ? 'bg-green-100 text-green-700' :
+                                    debtor['Status'] === 'Outstanding' ? 'bg-red-100 text-red-700 font-semibold' :
+                                    'bg-yellow-100 text-yellow-700';
+                row.className = `border-b border-gray-200 hover:bg-gray-50 ${statusClass}`;
+
+                row.innerHTML = `
+                    <td class="py-2 px-3">${debtor['Debtor Name']}</td>
+                    <td class="py-2 px-3">$${debtor['Original Debt'].toFixed(2)}</td>
+                    <td class="py-2 px-3">$${debtor['Amount Paid'].toFixed(2)}</td>
+                    <td class="py-2 px-3">$${debtor['Outstanding Debt'].toFixed(2)}</td>
+                    <td class="py-2 px-3">${debtor['Status']}</td>
+                    <td class="py-2 px-3">
+                        ${debtor['Outstanding Debt'] > 0 ?
+                            `<button class="btn-primary text-xs px-2 py-1" onclick="openDebtorPaymentModal('${debtor['Debtor ID']}')">Record Payment</button>` :
+                            `<span class="text-gray-500 text-xs">No Debt</span>`
+                        }
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (sortedDebtors.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">No debtors found.</td></tr>';
+            }
+        }
+
+        /** Populates and opens the debtor payment modal. */
+        function openDebtorPaymentModal(debtorId) {
+            const debtor = debtorsData.find(d => d['Debtor ID'] === debtorId);
+            if (debtor) {
+                document.getElementById('debtor-payment-debtor-id').value = debtor['Debtor ID'];
+                document.getElementById('debtor-payment-debtor-name').value = debtor['Debtor Name'];
+                document.getElementById('debtor-payment-outstanding').value = debtor['Outstanding Debt'].toFixed(2);
+                document.getElementById('debtor-payment-amount').value = ''; // Clear previous input
+                openModal(debtorPaymentModal);
+            } else {
+                showNotification('Debtor not found.', 'error');
+            }
+        }
+
+        /** Updates the supplier filter dropdown based on current inventory. */
+        function updateSupplierFilter() {
+            const supplierSelect = document.getElementById('inventory-supplier-filter');
+            supplierSelect.innerHTML = '<option value="">All Suppliers</option>'; // Reset options
+            const suppliers = [...new Set(inventoryData.map(p => p['Supplier']).filter(Boolean))]; // Get unique non-empty suppliers
+            suppliers.forEach(supplier => {
+                const option = document.createElement('option');
+                option.value = supplier;
+                option.textContent = supplier;
+                supplierSelect.appendChild(option);
+            });
+        }
+
+
+        // --- Event Listeners for Filters and Sync ---
+        document.getElementById('apply-inventory-filters').addEventListener('click', renderInventorySummary);
+        document.getElementById('inventory-search').addEventListener('input', renderInventorySummary);
+        document.getElementById('inventory-expiry-filter').addEventListener('change', renderInventorySummary);
+        document.getElementById('inventory-supplier-filter').addEventListener('change', renderInventorySummary);
+        document.getElementById('expiry-notification-period').addEventListener('change', renderInventorySummary); // Re-render inventory on period change
+
+        document.getElementById('apply-sales-filters').addEventListener('click', renderSalesSummary);
+        document.getElementById('sales-start-date').addEventListener('change', renderSalesSummary);
+        document.getElementById('sales-end-date').addEventListener('change', renderSalesSummary);
+        document.getElementById('sales-payment-method-filter').addEventListener('change', renderSalesSummary);
+
+        document.getElementById('manual-sync-btn').addEventListener('click', fetchAllData);
+
+        // --- Tab Switching Logic ---
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                sections.forEach(section => section.classList.remove('active'));
+                document.getElementById(tab.dataset.tab).classList.add('active');
+
+                // Re-render summaries when switching tabs to ensure fresh data/filters
+                renderAllSummaries();
+            });
+        });
+
+        // --- Initial Load ---
+        window.onload = () => {
+            loadDataFromLocal(); // Try to load from local storage first
+            fetchAllData(); // Then try to fetch from server
+        };
+    </script>
+</body>
+</html>
